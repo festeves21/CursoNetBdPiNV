@@ -1,6 +1,10 @@
 ﻿
 
+using AutoMapper;
 using Empresa.Inv.Application.Shared.Entities.Dto;
+using Empresa.Inv.Core.Entities;
+using Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore;
+using Empresa.Inv.EntityFrameworkCore.Repositories;
 using Empresa.Inv.Web.Host.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
@@ -18,18 +22,32 @@ namespace Empresa.Inv.Web.Host.Controllers
     {
 
         private readonly JwtTokenService _jw;
+        private readonly IRepository<User> _userRepository;
+        private readonly IMapper _mapper;
 
-        public AuthController(JwtTokenService jw)
+
+        public AuthController(JwtTokenService jw, IRepository<User> userRepository, IMapper mapper
+            )
         {
             _jw = jw;
+            _userRepository = userRepository;
+            _mapper = mapper;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel login)
         {
-            LoginServices logServ = new LoginServices();
+           // LoginServices logServ = new LoginServices();
 
-            var user = logServ.AuthenticateUser(login);
+            //var user = logServ.AuthenticateUser(login);
+
+
+            var userDb = _userRepository.GetAll()
+                .Where( u=> u.UserName == login.UserName
+                            && u.Password == login.Password
+                        ).FirstOrDefault();
+
+            var user = _mapper.Map<UserDTO>(userDb);
 
             if (user == null)
                 return Unauthorized();

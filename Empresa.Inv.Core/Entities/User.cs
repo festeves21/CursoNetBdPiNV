@@ -17,5 +17,9 @@
 
         public string Roles { get; set; }
 
+        public string? TwoFactorCode { get; set; }
+
+        public DateTime? TwoFactorExpire { get; set; }
+
     }
 }
