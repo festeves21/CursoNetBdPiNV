@@ -13,6 +13,7 @@ using Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore;
 using Empresa.Inv.Web.Host.Services;
 using Empresa.Inv.Web.Host.Authorization;
 using Empresa.Inv.Web.Host.Services.General;
+using Empresa.Inv.Infraestructure;
 
 namespace Empresa.Inv.Web.Host
 {
@@ -116,6 +117,22 @@ namespace Empresa.Inv.Web.Host
             #endregion
 
 
+            #region Configuracion Email
+
+            // Cargar configuración de appsettings.json
+            var emailSettings = builder.Configuration.GetSection("EmailSettings").Get<EmailSettings>();
+
+            // Registrar EmailSettings
+            builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
+                
+            var twoFactorSettings = builder.Configuration.GetSection("TwoFactorAuthentication").Get<TwoFactorSettings>();
+
+            // Registrar EmailSettings
+            builder.Services.Configure<TwoFactorSettings>(builder.Configuration.GetSection("TwoFactorAuthentication"));
+
+            #endregion
+
             try
             {
 
@@ -138,6 +155,9 @@ namespace Empresa.Inv.Web.Host
                 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
                 builder.Services.AddScoped<IProductRepository, ProductRepository>();
                 builder.Services.AddScoped<IProductCustomRepository, ProductCustomRepository>();
+
+
+                builder.Services.AddScoped<IEmailSender, EmailSender>();
 
 
                 //Registrar servicios de negocio

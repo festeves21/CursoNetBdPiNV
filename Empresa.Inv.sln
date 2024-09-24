@@ -3,17 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35303.130
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Application", "Empresa.Inv.Application\Empresa.Inv.Application.csproj", "{2FA69329-D758-4429-8BB5-E5E2349458D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.Application", "Empresa.Inv.Application\Empresa.Inv.Application.csproj", "{2FA69329-D758-4429-8BB5-E5E2349458D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Application.Shared", "Empresa.Inv.Application.Shared\Empresa.Inv.Application.Shared.csproj", "{C1118B96-9D92-4484-984C-76B4C960E0F6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.Application.Shared", "Empresa.Inv.Application.Shared\Empresa.Inv.Application.Shared.csproj", "{C1118B96-9D92-4484-984C-76B4C960E0F6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Core", "Empresa.Inv.Core\Empresa.Inv.Core.csproj", "{4F9284B6-E2FD-4C76-B96D-9AA50AD91B36}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.Core", "Empresa.Inv.Core\Empresa.Inv.Core.csproj", "{4F9284B6-E2FD-4C76-B96D-9AA50AD91B36}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Core.Shared", "Empresa.Inv.Core.Shared\Empresa.Inv.Core.Shared.csproj", "{11201D21-D742-4FC5-BC84-82013D474115}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.Core.Shared", "Empresa.Inv.Core.Shared\Empresa.Inv.Core.Shared.csproj", "{11201D21-D742-4FC5-BC84-82013D474115}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.EntityFrameworkCore", "Empresa.Inv.EntityFrameworkCore\Empresa.Inv.EntityFrameworkCore.csproj", "{A0E974B4-830C-46FE-8478-77A1C0B47727}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.EntityFrameworkCore", "Empresa.Inv.EntityFrameworkCore\Empresa.Inv.EntityFrameworkCore.csproj", "{A0E974B4-830C-46FE-8478-77A1C0B47727}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Web.Host", "Empresa.Inv.Web.Host\Empresa.Inv.Web.Host.csproj", "{D3400F4E-B0DA-4CBC-8478-EDDF0D479DE3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Empresa.Inv.Web.Host", "Empresa.Inv.Web.Host\Empresa.Inv.Web.Host.csproj", "{D3400F4E-B0DA-4CBC-8478-EDDF0D479DE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Empresa.Inv.Infraestructure", "Empresa.Inv.Infraestructure\Empresa.Inv.Infraestructure.csproj", "{BB5BBE52-73BA-4125-A6E4-D8CFEEC623BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{D3400F4E-B0DA-4CBC-8478-EDDF0D479DE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3400F4E-B0DA-4CBC-8478-EDDF0D479DE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3400F4E-B0DA-4CBC-8478-EDDF0D479DE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB5BBE52-73BA-4125-A6E4-D8CFEEC623BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB5BBE52-73BA-4125-A6E4-D8CFEEC623BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB5BBE52-73BA-4125-A6E4-D8CFEEC623BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB5BBE52-73BA-4125-A6E4-D8CFEEC623BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

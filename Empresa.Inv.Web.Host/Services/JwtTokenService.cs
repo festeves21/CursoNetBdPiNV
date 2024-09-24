@@ -3,8 +3,10 @@
 using Empresa.Inv.Application.Shared.Entities.Dto;
 using Empresa.Inv.Core.Entities;
 using Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore;
+using Empresa.Inv.Infraestructure;
 using Empresa.Inv.Web.Host.Authorization;
 using Jose;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,20 +17,30 @@ namespace Empresa.Inv.Web.Host.Services
 {
 
 
+
     public class JwtTokenService
     {
         private readonly JwtSettingsFile _jwtSettings;
+        private readonly TwoFactorSettings _twoFactorSettings;
+        private readonly IEmailSender _emailSender; // Servicio para enviar correos electrónicos
         private RSA _privateKey;
         private RSA _publicKey;
-
         private readonly IRepository<RefreshToken> _refreshTokenRepository;
-        public JwtTokenService(IOptions<JwtSettingsFile> jwtSettings, IRepository<RefreshToken> refreshTokenRepository)
+        private readonly IRepository<User> _userRepository;
+
+        public JwtTokenService(
+            IOptions<JwtSettingsFile> jwtSettings,
+            IOptions<TwoFactorSettings> twoFactorSettings,
+            IEmailSender emailSender,
+            IRepository<RefreshToken> refreshTokenRepository,
+            IRepository<User> userRepository)
         {
-
             _refreshTokenRepository = refreshTokenRepository;
-
             _jwtSettings = jwtSettings.Value;
+            _twoFactorSettings = twoFactorSettings.Value;
+            _emailSender = emailSender;
             LoadKeys();
+            _userRepository = userRepository;
         }
 
         private void LoadKeys()
@@ -45,20 +57,136 @@ namespace Empresa.Inv.Web.Host.Services
 
         public async Task<TokenResponseDTO> GenerateToken(UserDTO user, string clientType)
         {
-
-            var claims = new List<Claim>
+            if (_twoFactorSettings.Enabled)
             {
-                    new Claim(JwtRegisteredClaimNames.Sub,user.Id.ToString()),
-                    new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
-                     new Claim("client_type", clientType) 
-                    //new Claim(ClaimTypes.Role, user.Role)
+                // Generar el código de verificación y enviarlo por correo
+                var verificationCode = new Random().Next(100000, 999999).ToString();
+                user.TwoFactorCode = verificationCode;
+                user.TwoFactorExpire = DateTime.UtcNow.AddMinutes(10); // El código expira en 10 minutos
+
+
+
+                //var userDb = new User();
+                //userDb.Id = user.Id;
+                //userDb.UserName = user.UserName;
+                //userDb.Roles = user.Roles;
+                //userDb.TwoFactorCode  = user.TwoFactorCode;
+                //userDb.TwoFactorExpiry = user.TwoFactorExpiry;
+
+                var userDb = await _userRepository.GetAll().Where(x => x.Id == user.Id).FirstOrDefaultAsync();
+
+                if (userDb != null)
+                {
+                    userDb.TwoFactorCode = user.TwoFactorCode;
+                    userDb.TwoFactorExpire = user.TwoFactorExpire;
+
+                    // Actualizar el usuario en la base de datos
+                    _userRepository.Update(userDb);
+                }
+                else
+                {
+
+                    throw new InvalidOperationException("Error enviando el código de verificación 2FA.");
+
+                }
+
+
+                try
+                {
+                    // Enviar el código de verificación por correo
+                    await _emailSender.SendEmailAsync(
+                        user.Email,
+                        "Código de verificación",
+                        $"Tu código de verificación es: {verificationCode}");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Error enviando el código de verificación 2FA.", ex);
+                }
+
+                // Retornar un token temporal hasta que el usuario valide el código de 2FA
+                var tokenString = GeneratePending2FAToken(user);
+
+                return new TokenResponseDTO
+                {
+                    AccessToken = tokenString,
+                    RefreshToken = null // No se genera RefreshToken hasta que se valide 2FA
                 };
+            }
+            else
+            {
+                // Generar el token directamente
+                return await GenerateFullToken(user, clientType);
+            }
+        }
+
+        private string GeneratePending2FAToken(UserDTO user)
+        {
+            var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim(ClaimTypes.Role, "pending-2fa") // Indica que 2FA está pendiente
+        };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = new RsaSecurityKey(_privateKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(10), // Token temporal
+                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256)
+            };
+
+            var accessToken = tokenHandler.CreateToken(tokenDescriptor);
+            var accessTokenString = tokenHandler.WriteToken(accessToken);
+
+            // Codificar el token usando JWE
+            var encryptedToken = JWT.Encode(
+                accessTokenString,
+                _publicKey,
+                JweAlgorithm.RSA_OAEP,
+                JweEncryption.A256GCM);
+
+            return encryptedToken;
+        }
+
+        public async Task<TokenResponseDTO> ValidateTwoFactorAndGenerateToken(UserDTO user, string code)
+        {
+            // Verifica si el código es correcto y no ha expirado
+            if (user.TwoFactorCode != code || user.TwoFactorExpire < DateTime.UtcNow)
+            {
+                throw new SecurityTokenException("Código 2FA incorrecto o expirado.");
+            }
+
+            // Limpiar el código de 2FA una vez validado
+            user.TwoFactorCode = null;
+            user.TwoFactorExpire = null;
 
 
-            // Dividir los roles separados por comas
+            // Obtener el usuario actualizado desde la base de datos
+            var userFromDb = await _userRepository.GetByIdAsync(user.Id);
+
+            // Actualizar el usuario en la base de datos
+            _userRepository.Update(userFromDb);
+
+
+            // Generar el token completo después de validar 2FA
+            return await GenerateFullToken(user, "user");
+        }
+
+        private async Task<TokenResponseDTO> GenerateFullToken(UserDTO user, string clientType)
+        {
+            var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim("client_type", clientType)
+        };
+
+            // Agregar los roles como claims y autorizaciones personalizadas
             var rolesList = user.Roles.Split(',').Select(r => r.Trim()).ToList();
-
-            // Agregar los roles como claims
             foreach (var role in rolesList)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -71,16 +199,8 @@ namespace Empresa.Inv.Web.Host.Services
                 }
             }
 
-
             var tokenHandler = new JwtSecurityTokenHandler();
-
-
-            var privateKeyPem = File.ReadAllText(_jwtSettings.PrivateKeyPath);
-            var publicKeyPem = File.ReadAllText(_jwtSettings.PublicKeyPath);
-
-            RSA rsa = RSA.Create();
-            rsa.ImportFromPem(privateKeyPem.ToCharArray());
-            var key = new RsaSecurityKey(rsa);
+            var key = new RsaSecurityKey(_privateKey);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -91,33 +211,27 @@ namespace Empresa.Inv.Web.Host.Services
                 SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256)
             };
 
-
             var accessToken = tokenHandler.CreateToken(tokenDescriptor);
             var accessTokenString = tokenHandler.WriteToken(accessToken);
 
+            var encryptedToken = JWT.Encode(
+                accessTokenString,
+                _publicKey,
+                JweAlgorithm.RSA_OAEP,
+                JweEncryption.A256GCM);
 
-            var encryptedToken =
-                JWT.Encode(accessTokenString, _publicKey, JweAlgorithm.RSA_OAEP, JweEncryption.A256GCM);
-
-
-            // Generar Refresh Token 
+            // Generar Refresh Token
             var refreshToken = await GenerateRefreshToken(user.Id);
 
-
-            // Retornar el DTO con Access Token y Refresh Token
             return new TokenResponseDTO
             {
                 AccessToken = encryptedToken,
                 RefreshToken = refreshToken
             };
-
-
         }
-
 
         public string DecryptToken(string encryptedToken)
         {
-            // Desencriptar el token utilizando la clave privada
             try
             {
                 var decryptedToken = JWT.Decode(encryptedToken, _privateKey);
@@ -125,7 +239,6 @@ namespace Empresa.Inv.Web.Host.Services
             }
             catch (Exception ex)
             {
-                // Manejar errores en caso de token inválido o problemas con el descifrado
                 throw new SecurityTokenException("Token inválido o no pudo ser desencriptado", ex);
             }
         }
@@ -151,7 +264,7 @@ namespace Empresa.Inv.Web.Host.Services
             // Desencriptar el token
             var jwt = DecryptToken(encryptedToken);
 
-            // Aquí puedes validar el token desencriptado como cualquier JWT normal
+            // Validar el token desencriptado
             var tokenHandler = new JwtSecurityTokenHandler();
             var validationParameters = new TokenValidationParameters
             {
@@ -163,10 +276,22 @@ namespace Empresa.Inv.Web.Host.Services
             SecurityToken validatedToken;
             var principal = tokenHandler.ValidateToken(jwt, validationParameters, out validatedToken);
 
-            return principal;
+            // Verifica si 2FA está habilitado
+            if (_twoFactorSettings.Enabled)
+            {
+                // Busca si el token contiene la información de "pending-2fa"
+                var roleClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                if (roleClaim == "pending-2fa")
+                {
+                    // Si el usuario aún no ha validado el segundo factor, lanzar excepción
+                    throw new SecurityTokenException("Autenticación de doble factor pendiente.");
+                }
+            }
 
-            // El token es válido, puedes continuar con la lógica de autenticación/autorización
+            // El token es válido y el 2FA está completado (o no está habilitado)
+            return principal;
         }
+
         private async Task<RefreshTokenDTO> GenerateRefreshToken(int userId)
         {
             var randomBytes = new byte[32];
@@ -177,14 +302,11 @@ namespace Empresa.Inv.Web.Host.Services
 
             var refreshToken = Convert.ToBase64String(randomBytes);
 
-
-
             var rt = new RefreshTokenDTO
             {
                 Token = refreshToken,
-                Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiresInDays), // Expiración del Refresh Token
+                Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiresInDays)
             };
-
 
             var newRefreshToken = new RefreshToken
             {
@@ -197,14 +319,8 @@ namespace Empresa.Inv.Web.Host.Services
             // Guardar en el repositorio
             await _refreshTokenRepository.AddAsync(newRefreshToken);
 
-
             return rt;
         }
 
-
     }
-
-
-
-
-}
+ }

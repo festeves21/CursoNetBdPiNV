@@ -1,5 +1,6 @@
 ﻿using Empresa.Inv.Application.Shared.Entities.Dto;
 using MailKit.Net.Smtp;
+using Microsoft.Extensions.Options;
 using MimeKit;
 using System;
 using System.Collections.Generic;
