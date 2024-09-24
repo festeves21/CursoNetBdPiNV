@@ -134,7 +134,14 @@ namespace Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore
                 entity.Property(u => u.Roles)
                       .IsRequired()
                       .HasMaxLength(512); // Longitud de Roles
-            });
+
+                entity.Property(u => u.TwoFactorCode)
+                      .IsRequired()
+                      .HasMaxLength(512); // Longitud de TwoFa
+
+
+
+                            });
 
 
             // Configuración de ProductBalance
