@@ -12,7 +12,7 @@ namespace Empresa.Inv.Web.Host.Services
             // Este es solo un ejemplo de usuario
             return new UserDTO
             {
-                Id = 2,
+                Id = 5,
                 UserName = "exampleUser",
                 Roles = "admin"
             };
