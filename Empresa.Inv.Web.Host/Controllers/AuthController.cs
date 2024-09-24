@@ -47,6 +47,8 @@ namespace Empresa.Inv.Web.Host.Controllers
                             && u.Password == login.Password
                         ).FirstOrDefault();
 
+            var user = _mapper.Map<UserDTO>(userDb);
+
             if (user == null)
                 return Unauthorized();
 
