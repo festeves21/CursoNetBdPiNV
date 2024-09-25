@@ -128,7 +128,7 @@ namespace Empresa.Inv.EntityFrameworkCore.Repositories
             // Guardar los nombres en una variable
             string concatenatedParameterNames = string.Join(", ", parameterNames);
 
-            return await _context.Set<T>().FromSqlRaw("EXEC " +procedureName + " " + concatenatedParameterNames, parameters).ToListAsync();
+            return await _context.Set<T>().FromSqlRaw(procedureName + " " + concatenatedParameterNames, parameters).ToListAsync();
 
         }
 

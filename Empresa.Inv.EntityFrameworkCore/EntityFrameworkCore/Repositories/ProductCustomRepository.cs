@@ -38,7 +38,7 @@ namespace Empresa.Inv.EntityFrameworkCore.Repositories
 
 
             // Ejecutar un procedimiento almacenado que devuelve resultados
-            var products = await ExecuteStoredProcedureWithResultsAsync("EXEC GetProductsPaged @SearchTerm,@PageNumber,@PageSize", parameters);
+            var products = await ExecuteStoredProcedureWithResultsAsync("EXEC GetProductsPaged", parameters);
 
             return _mapper.Map<IEnumerable<ProductDTO>>(products);
             // Trabaja con los resultados
