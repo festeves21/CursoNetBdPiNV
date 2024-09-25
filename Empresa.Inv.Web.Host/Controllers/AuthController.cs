@@ -8,6 +8,7 @@ using Empresa.Inv.EntityFrameworkCore.Repositories;
 using Empresa.Inv.Web.Host.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Empresa.Inv.Web.Host.Controllers
@@ -26,8 +27,7 @@ namespace Empresa.Inv.Web.Host.Controllers
         private readonly IMapper _mapper;
 
 
-        public AuthController(JwtTokenService jw, IRepository<User> userRepository, IMapper mapper
-            )
+        public AuthController(JwtTokenService jw, IRepository<User> userRepository, IMapper mapper)
         {
             _jw = jw;
             _userRepository = userRepository;
@@ -37,38 +37,86 @@ namespace Empresa.Inv.Web.Host.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel login)
         {
-           // LoginServices logServ = new LoginServices();
+            LoginServices logServ = new LoginServices();
 
             //var user = logServ.AuthenticateUser(login);
 
+            var userDb = await _userRepository.GetAll().Where(u => u.UserName == login.UserName && u.Password == login.Password).FirstOrDefaultAsync();
 
-            var userDb = _userRepository.GetAll()
-                .Where( u=> u.UserName == login.UserName
-                            && u.Password == login.Password
-                        ).FirstOrDefault();
-
-            var user = _mapper.Map<UserDTO>(userDb);
-
-            if (user == null)
+            if (userDb == null)
                 return Unauthorized();
 
             // Generar el Access Token y el Refresh Token
+            var user = _mapper.Map<UserDTO>(userDb);
             var tokenResponse = await _jw.GenerateToken(user, login.ClientType);
 
-            // Crear el objeto de respuesta usando la DTO
+
+
             var response = new AuthResponseDTO
             {
                 IsSuccess = true,
                 AccessToken = tokenResponse.AccessToken,
-                RefreshToken = tokenResponse.RefreshToken.Token,
-                RefreshTokenExpires = tokenResponse.RefreshToken.Expires
+
             };
+
 
 
             // Retornar la respuesta con el token y el refresh token
             return Ok(response);
 
         }
+
+        // Paso 2: Validar el Código 2FA
+        [HttpPost("validate-2fa")]
+        public async Task<IActionResult> ValidateTwoFactor([FromBody] TwoFactorDto twoFactorDto)
+        {
+            if (twoFactorDto == null || string.IsNullOrEmpty(twoFactorDto.Username) || string.IsNullOrEmpty(twoFactorDto.Code))
+            {
+                return BadRequest("Datos inválidos.");
+            }
+
+            // Obtener al usuario desde tu repositorio o servicio
+            var user = await GetUserByUsername(twoFactorDto.Username);
+            if (user == null)
+            {
+                return Unauthorized("Usuario no encontrado.");
+            }
+
+            try
+            {
+                var tokenResponse = await _jw.ValidateTwoFactorAndGenerateToken(user, twoFactorDto.Code);
+                return Ok(tokenResponse);
+            }
+            catch (SecurityTokenException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+        private async Task<UserDTO> GetUserByUsername(string username)
+        {
+            var ret = new UserDTO();
+
+            var userByUserName = await _userRepository.GetAll().Where(u => u.UserName == username).FirstOrDefaultAsync();
+
+            if (userByUserName != null)
+            {
+                ret = new UserDTO
+                {
+                    Id = userByUserName.Id,
+                    UserName = userByUserName.UserName,
+                    Email = userByUserName.Email,
+                    Roles = userByUserName.Roles,
+                    TwoFactorCode = userByUserName.TwoFactorCode,
+                    TwoFactorExpire = userByUserName.TwoFactorExpire
+
+                };
+            }
+
+            return ret;
+
+
+        }
+
 
         [HttpPost("validate-token")]
         public async Task<IActionResult> ValidateToken([FromBody] TokenRequest request)
@@ -132,5 +180,4 @@ namespace Empresa.Inv.Web.Host.Controllers
         }
 
     }
-
 }

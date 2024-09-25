@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="jose-jwt" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.33" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.33">
@@ -23,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Empresa.Inv.Application\Empresa.Inv.Application.csproj" />
+    <ProjectReference Include="..\Empresa.Inv.Infraestructure\Empresa.Inv.Infraestructure.csproj" />
   </ItemGroup>
 
 </Project>

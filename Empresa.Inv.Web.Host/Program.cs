@@ -13,6 +13,9 @@ using Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore;
 using Empresa.Inv.Web.Host.Services;
 using Empresa.Inv.Web.Host.Authorization;
 using Empresa.Inv.Web.Host.Services.General;
+using Empresa.Inv.Infraestructure;
+using AspNetCoreRateLimit;
+using Empresa.Inv.Web.Host.General;
 
 namespace Empresa.Inv.Web.Host
 {
@@ -41,6 +44,7 @@ namespace Empresa.Inv.Web.Host
             });
 
             #endregion
+
             #region Configuración JWT Parte 1
 
             // Configuración JWT
@@ -52,6 +56,7 @@ namespace Empresa.Inv.Web.Host
             }
 
 
+
             // Registro para compartir la configuracion leida del appsetting
             builder.Services.Configure<JwtSettingsFile>(builder.Configuration.GetSection("JwtSettings"));
             builder.Services.AddSingleton(jwtSettings);
@@ -59,6 +64,7 @@ namespace Empresa.Inv.Web.Host
             //Registro JwtServices
             builder.Services.AddScoped<JwtTokenService>();
             #endregion
+
             #region Configuración Autorizacion personalizada
             //Registro de autorizacion personalizada
             builder.Services.AddAuthorization(options =>
@@ -69,6 +75,7 @@ namespace Empresa.Inv.Web.Host
                 });
             });
             #endregion
+
             #region Configuración JWT Parte 2
 
 
@@ -104,6 +111,7 @@ namespace Empresa.Inv.Web.Host
             });
 
             #endregion
+
             #region Configuración SERILOG parte 1
 
             Log.Logger = new LoggerConfiguration()
@@ -116,11 +124,46 @@ namespace Empresa.Inv.Web.Host
             #endregion
 
 
+            #region Configuración EMAIL
+
+            // Cargar configuración de appsettings.json
+            var emailSettings = builder.Configuration.GetSection("EmailSettings").Get<EmailSettings>();
+
+            // Registrar EmailSettings
+            builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
+            // Registrar TwoFactorSettings en el contenedor de servicios
+            var twoFactorSettings = builder.Configuration.GetSection("TwoFactorAuthentication").Get<TwoFactorSettings>();
+
+            builder.Services.Configure<TwoFactorSettings>(builder.Configuration.GetSection("TwoFactorAuthentication"));
+
+
+
+            #endregion
+
+
+            #region Configuración RATE LIMITING - setting   parte 1
+
+            // Agregar las configuraciones de rate limiting
+            builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+            builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
+
+            builder.Services.Configure<ClientRateLimitOptions>(builder.Configuration.GetSection("ClientRateLimiting"));
+
+            builder.Services.Configure<ClientRateLimitPolicies>(builder.Configuration.GetSection("ClientRateLimitPolicies"));
+
+            // Agregar los stores necesarios
+            builder.Services.AddInMemoryRateLimiting();
+
+
+            #endregion
+
             try
             {
 
                 // Usa Serilog como el logger
                 builder.Host.UseSerilog();
+
                 builder.Services.AddControllers();
 
 
@@ -133,19 +176,32 @@ namespace Empresa.Inv.Web.Host
                     ));
 
                 #endregion
+
                 #region Registro de Interfaces E Implementacion (para la ID)
+
                 //Registrar repositorios
                 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
                 builder.Services.AddScoped<IProductRepository, ProductRepository>();
                 builder.Services.AddScoped<IProductCustomRepository, ProductCustomRepository>();
 
+                //Envio de correo
+                builder.Services.AddScoped<IEmailSender, EmailSender>();
+
 
                 //Registrar servicios de negocio
                 builder.Services.AddScoped<IInvAppService, InvAppService>();
 
+                // Registrar los servicios necesarios para AspNetCoreRateLimit
+                builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+                builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+                builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+
+
 
                 // Registro de UnitOfWork
                 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
                 #endregion
 
@@ -168,12 +224,23 @@ namespace Empresa.Inv.Web.Host
 
                 #region Configuración del servicio de caché
                 // Configura el servicio de caching
+
+                builder.Services.AddOptions();     // complementario a Rate Limiting
                 builder.Services.AddMemoryCache(); // Configura el servicio de caching
                 builder.Services.AddSingleton<CacheService>(); // Registra el servicio de cache
 
 
                 #endregion
+
                 var app = builder.Build();
+
+                #region Configuracion RateLimiting parte 2
+                //app.UseIpRateLimiting();
+                app.UseMiddleware<ClientIdValidationMiddleware>();
+                // Usar el middleware de ClientRateLimiting
+                app.UseClientRateLimiting();
+
+                #endregion
 
 
                 #region Configuración del manejo centralizado de errores
@@ -198,11 +265,10 @@ namespace Empresa.Inv.Web.Host
                 //Utilización de routing - Añadido
                 app.UseRouting();
 
-                #region Cors Parte 2
+
+                #region Configuración CORS parte 2
                 //Implementación politica CORS   Todas las políticas - Añadido
                 app.UseCors("AllowSpecificOrigin"); // Usa la política de CORS definida
-
-
                 #endregion
 
                 // Middleware de autenticación y autorización - Añadido
@@ -214,6 +280,7 @@ namespace Empresa.Inv.Web.Host
                 app.UseHttpsRedirection();
 
                 app.UseAuthorization();
+
                 app.MapControllers();
 
                 app.Run();
@@ -238,4 +305,5 @@ namespace Empresa.Inv.Web.Host
         }
 
     }
+
 }
