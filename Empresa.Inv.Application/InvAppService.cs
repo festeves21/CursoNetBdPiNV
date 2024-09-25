@@ -26,6 +26,7 @@ namespace Empresa.Inv.Application
         private readonly ILogger<InvAppService> _logger;
 
 
+
         public InvAppService(
 
             IRepository<Product> productsRepository,
@@ -56,6 +57,8 @@ namespace Empresa.Inv.Application
 
 
 
+
+
         public async Task<IEnumerable<ProductDTO>> GetProductsPagedAsyncEf(
             string searchTerm, int pageNumber, int pageSize)
         {
@@ -76,6 +79,7 @@ namespace Empresa.Inv.Application
 
             return _mapper.Map<IEnumerable<ProductDTO>>(products);
         }
+
 
 
         public async Task<ProductDTO> GetProductDetailsByIdAsync(int id)
@@ -197,6 +201,7 @@ namespace Empresa.Inv.Application
             }
 
 
+
             return result;
 
         }
@@ -217,6 +222,7 @@ namespace Empresa.Inv.Application
 
             return result;
         }
+
 
 
 
@@ -249,6 +255,7 @@ namespace Empresa.Inv.Application
                     .ToListAsync();
 
 
+
             if (products == null) products = new List<ProductDTO>();
 
             return products;
@@ -260,12 +267,115 @@ namespace Empresa.Inv.Application
         {
             var lista = await _productCustomRepository.GetProductsPagedAsyncSp(searchTerm, pageNumber, pageSize);
 
+
             return _mapper.Map<List<ProductDTO>>(lista);
 
 
         }
 
+        public async Task<List<ProductHDTO>> HGetProductsSp(string searchTerm,
+                  int pageNumber = 1, int pageSize = 10)
+        {
+            var lista = await _productCustomRepository.GetProductsPagedAsyncSp(searchTerm, pageNumber, pageSize);
+
+
+            return _mapper.Map<List<ProductHDTO>>(lista);
+
+
+        }
+
+
+        public async Task<ProductDTO> CreateProductAsync(ProductDTO productDto)
+        {
+            if (productDto == null)
+                throw new ArgumentNullException(nameof(productDto));
+
+            // Mapeo de DTO a entidad
+            var product = _mapper.Map<Product>(productDto);
+
+            // Agregar a la base de datos
+            await _productsRepository.AddAsync(product);
+
+            // Guardar cambios
+            await _uow.SaveAsync();
+
+            // Mapeo de entidad a DTO para el resultado
+            var resultDto = _mapper.Map<ProductDTO>(product);
+
+            return resultDto;
+        }
+
+        public async Task<ProductDTO> GetProductByIdAsync(int id)
+        {
+            // Obtener el producto por ID
+            var product = await _productsRepository.GetAll()
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+                throw new KeyNotFoundException($"Producto con ID {id} no encontrado.");
+
+            // Mapeo de entidad a DTO
+            var productDto = _mapper.Map<ProductDTO>(product);
+
+            return productDto;
+        }
+
+
+
+
+
+        public async Task<ProductDTO> UpdateProductAsync(int id, ProductDTO productDto)
+        {
+            if (productDto == null)
+                throw new ArgumentNullException(nameof(productDto));
+
+            // Buscar el producto existente
+            var existingProduct = await _productsRepository.GetAll()
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existingProduct == null)
+                throw new KeyNotFoundException($"Producto con ID {id} no encontrado.");
+
+            // Actualizar campos
+            _mapper.Map(productDto, existingProduct);
+
+            // Actualizar en el repositorio
+            _productsRepository.Update(existingProduct);
+
+            // Guardar cambios
+            await _uow.SaveAsync();
+
+            // Mapeo de entidad a DTO para el resultado
+            var resultDto = _mapper.Map<ProductDTO>(existingProduct);
+
+            return resultDto;
+        }
+
+
+
+        public async Task<bool> DeleteProductAsync(int id)
+        {
+            // Buscar el producto existente
+            var existingProduct = await _productsRepository.GetAll()
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existingProduct == null)
+                throw new KeyNotFoundException($"Producto con ID {id} no encontrado.");
+
+            // Eliminar del repositorio
+            await _productsRepository.DeleteAsync(id);
+
+            // Guardar cambios
+            await _uow.SaveAsync();
+
+            return true;
+        }
+
+
 
     }
+
 
 }
