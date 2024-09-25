@@ -9,11 +9,21 @@ namespace Empresa.Inv.Application.Shared.Entities
 
         Task<ProductDTO> GetProductDetailsByIdAsync(int id);
 
-        Task<bool> UpdateInventAsync(int productId, int typeId, decimal amount, int userId);
+        Task<Boolean> UpdateInventAsync(int productId, int typeId, decimal amount, int userId);
 
         Task<List<UserKardexSummaryDto>> GetKardexSummaryByUserAsync(DateTime startDate, DateTime endDate);
 
         Task<List<ProductDTO>> GetProductsSp(string searchTerm, int pageNumber = 1, int pageSize = 10);
+        Task<List<ProductHDTO>> HGetProductsSp(string searchTerm, int pageNumber = 1, int pageSize = 10);
+
+
+
+
+        Task<ProductDTO> CreateProductAsync(ProductDTO productDto);
+        Task<ProductDTO> GetProductByIdAsync(int id);
+        Task<ProductDTO> UpdateProductAsync(int id, ProductDTO productDto);
+
+        Task<bool> DeleteProductAsync(int id);
 
 
     }

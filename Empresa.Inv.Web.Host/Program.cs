@@ -16,6 +16,9 @@ using Empresa.Inv.Web.Host.Services.General;
 using Empresa.Inv.Infraestructure;
 using AspNetCoreRateLimit;
 using Empresa.Inv.Web.Host.General;
+using FluentValidation;
+using Empresa.Inv.Application.Validators;
+using FluentValidation.AspNetCore;
 
 namespace Empresa.Inv.Web.Host
 {
@@ -166,6 +169,13 @@ namespace Empresa.Inv.Web.Host
 
                 builder.Services.AddControllers();
 
+                #region Validacion con FluentValidation
+
+                builder.Services.AddFluentValidationAutoValidation();
+                builder.Services.AddTransient<IValidator<ProductDTO>,ProductValidator>();
+
+                #endregion
+
 
                 #region Configuración Contexto EF
 
@@ -236,9 +246,9 @@ namespace Empresa.Inv.Web.Host
 
                 #region Configuracion RateLimiting parte 2
                 //app.UseIpRateLimiting();
-                app.UseMiddleware<ClientIdValidationMiddleware>();
+                //app.UseMiddleware<ClientIdValidationMiddleware>();
                 // Usar el middleware de ClientRateLimiting
-                app.UseClientRateLimiting();
+                //app.UseClientRateLimiting();
 
                 #endregion
 
