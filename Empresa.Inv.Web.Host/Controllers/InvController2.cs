@@ -184,5 +184,21 @@ namespace Empresa.Inv.Web.Host.Controllers
             };
             return links;
         }
+
+
+        [HttpGet][Route("api/testException")]    
+        public IActionResult TestException()
+        {       
+            try
+             {           
+            // Simular una excepción
+                throw new Exception("Test exception");         }       
+            catch(Exception ex) 
+            {
+                // Enviar la excepción a Application Insights
+                _telemetryClient.TrackException(ex);
+                return StatusCode(500,"Exception logged"); 
+            } 
+        }
     }
 }

@@ -261,6 +261,9 @@ namespace Empresa.Inv.Web.Host
 
                 var app = builder.Build();
 
+                app.UseMiddleware<ResponseLoggingMiddleware>();
+
+
                 #region Configuracion RateLimiting parte 2
                 //app.UseIpRateLimiting();
                 //app.UseMiddleware<ClientIdValidationMiddleware>();
