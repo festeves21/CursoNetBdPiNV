@@ -23,6 +23,7 @@ namespace Empresa.Inv.Web.Host.Controllers
 
         private readonly IValidator<ProductDTO> _productValidator;
         private readonly IMediator _mediator;
+        
 
         public HInvController4(IInvAppService productsAppService, LinkGenerator linkGenerator,
             IMapper mapper,

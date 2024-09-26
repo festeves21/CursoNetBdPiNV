@@ -146,6 +146,12 @@ namespace Empresa.Inv.Web.Host
             #endregion
 
 
+            #region Monitoreo Insights
+
+            builder.Services.AddApplicationInsightsTelemetry();
+
+            #endregion
+
             #region Configuración RATE LIMITING - setting   parte 1
 
             // Agregar las configuraciones de rate limiting
@@ -254,6 +260,9 @@ namespace Empresa.Inv.Web.Host
                 #endregion
 
                 var app = builder.Build();
+
+                app.UseMiddleware<ResponseLoggingMiddleware>();
+
 
                 #region Configuracion RateLimiting parte 2
                 //app.UseIpRateLimiting();

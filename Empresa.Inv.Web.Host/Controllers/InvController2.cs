@@ -5,7 +5,9 @@ using Empresa.Inv.Application.Shared.Entities;
 using Empresa.Inv.Application.Shared.Entities.Dto;
 using Empresa.Inv.Web.Host.Authorization;
 using Empresa.Inv.Web.Host.Services;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Abstractions;
 
 namespace Empresa.Inv.Web.Host.Controllers
 {
@@ -16,14 +18,18 @@ namespace Empresa.Inv.Web.Host.Controllers
         private readonly IInvAppService _productsAppService;
         private readonly LinkGenerator _linkGenerator;
         private readonly IMapper _mapper;
+        private readonly TelemetryClient _telemetryClient;
 
         public HInvController(IInvAppService productsAppService, LinkGenerator linkGenerator,
-            IMapper mapper
+            IMapper mapper,
+            TelemetryClient telemetryClient
+
             )
         {
             _productsAppService = productsAppService;
             _linkGenerator = linkGenerator;
             _mapper = mapper;
+            _telemetryClient = telemetryClient;
         }
 
         // ==========================
@@ -96,6 +102,7 @@ namespace Empresa.Inv.Web.Host.Controllers
         [HttpGet("GetProductById/{id}")]
         public async Task<IActionResult> GetProductById(int id)
         {
+            _telemetryClient.TrackEvent("MyCustomeEvent");
             var product = await _productsAppService.GetProductDetailsByIdAsync(id);
             if (product == null)
             {
@@ -176,6 +183,22 @@ namespace Empresa.Inv.Web.Host.Controllers
                 }
             };
             return links;
+        }
+
+
+        [HttpGet][Route("api/testException")]    
+        public IActionResult TestException()
+        {       
+            try
+             {           
+            // Simular una excepción
+                throw new Exception("Test exception");         }       
+            catch(Exception ex) 
+            {
+                // Enviar la excepción a Application Insights
+                _telemetryClient.TrackException(ex);
+                return StatusCode(500,"Exception logged"); 
+            } 
         }
     }
 }
