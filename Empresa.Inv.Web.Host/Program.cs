@@ -19,6 +19,7 @@ using Empresa.Inv.Web.Host.General;
 using FluentValidation;
 using Empresa.Inv.Application.Validators;
 using FluentValidation.AspNetCore;
+using System.Reflection;
 
 namespace Empresa.Inv.Web.Host
 {
@@ -184,6 +185,16 @@ namespace Empresa.Inv.Web.Host
                        .AddInterceptors(new CustomDbCommandInterceptor())
                        .AddInterceptors(new PerformanceInterceptor()
                     ));
+
+                #endregion
+
+                #region Manejadores CQRS
+
+
+                builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
+                    Assembly.GetExecutingAssembly(),
+                    typeof(Empresa.Inv.Application.Entities.ProductEntity.Handler.GetProductByIdQueryHandler).Assembly
+                ));
 
                 #endregion
 

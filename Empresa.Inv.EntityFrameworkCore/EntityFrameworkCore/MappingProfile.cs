@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Empresa.Inv.Application.Shared.Entities.Dto;
+using Empresa.Inv.Application.Shared.Entities.ProductEntity.Commands;
 using Empresa.Inv.Core.Entities;
 
 namespace Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore
@@ -13,6 +14,13 @@ namespace Empresa.Inv.EntityFrameworkCore.EntityFrameworkCore
             CreateMap<ProductDTO, Product>();
 
             CreateMap<UserDTO, User>().ReverseMap();
+
+
+
+            CreateMap<CreateProductCommand, Product>();
+            CreateMap<Product, ProductDTO>()
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : "No Category"))
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier != null ? src.Supplier.Name : "No Supplier"));
 
 
             //CreateMap<ProductHDTO, Product>().ReverseMap();
