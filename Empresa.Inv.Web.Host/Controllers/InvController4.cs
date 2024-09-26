@@ -198,16 +198,17 @@ namespace Empresa.Inv.Web.Host.Controllers
             return links;
         }
 
-        /*
+        
+          [HttpPost("CreateProduct2")]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductCommand command) 
         {
             var productId = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetProductById), new { id = productId }, null);
         }
-        */
+        
 
         // GET api/products/{id}
-          [HttpGet("GetProductById2/{id}")]
+        [HttpGet("GetProductById2/{id}")]
           public async Task<IActionResult> GetProductById2(int id)
           {
               var query = new GetProductByIdQuery(id);
